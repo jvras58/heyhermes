@@ -41,5 +41,30 @@ class Brain:
         self.history.append({"role": "assistant", "content": answer})
         return answer
 
+    def ask_stream(self, text: str):
+        s = self.settings
+        self.history.append({"role": "user", "content": text})
+        self.history = self.history[-s.max_history :]
+        messages = [{"role": "system", "content": s.system_prompt}, *self.history]
+
+        full_answer = ""
+        try:
+            response = self.client.chat.completions.create(
+                model=s.hermes_model,
+                messages=messages,
+                stream=True,
+            )
+            for chunk in response:
+                content = chunk.choices[0].delta.content
+                if content:
+                    full_answer += content
+                    yield content
+        except Exception as exc:
+            log.exception("Erro ao consultar o hermes-agent")
+            full_answer = f"Erro: {exc}"
+            yield full_answer
+
+        self.history.append({"role": "assistant", "content": full_answer})
+
     def reset(self) -> None:
         self.history.clear()

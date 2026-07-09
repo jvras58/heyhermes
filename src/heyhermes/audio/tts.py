@@ -38,3 +38,25 @@ class TextToSpeech:
         ) as stream:
             for chunk in self.voice.synthesize(text):
                 stream.write(chunk.audio_int16_bytes)
+
+    def say_stream(self, text_generator) -> None:
+        buffer = ""
+        punctuation = (".", "!", "?", ",", "\n")
+
+        with sd.RawOutputStream(
+            samplerate=self.voice.config.sample_rate, channels=1, dtype="int16"
+        ) as stream:
+            for token in text_generator:
+                buffer += token
+
+                if any(buffer.endswith(symbol) for symbol in punctuation):
+                    chunk_text = buffer.strip()
+                    if chunk_text:
+                        log.debug("Sintetizando chunk: %r", chunk_text)
+                        for audio_chunk in self.voice.synthesize(chunk_text):
+                            stream.write(audio_chunk.audio_int16_bytes)
+                    buffer = ""
+
+            if buffer.strip():
+                for audio_chunk in self.voice.synthesize(buffer.strip()):
+                    stream.write(audio_chunk.audio_int16_bytes)

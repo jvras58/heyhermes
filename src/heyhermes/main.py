@@ -73,8 +73,8 @@ def _conversation(settings, stt: SpeechToText, tts: TextToSpeech, brain: Brain) 
             tts.say("Tá bom.")
             return True
 
-        answer = brain.ask(command)
-        tts.say(answer or "Feito.")
+        answer_stream = brain.ask_stream(command)
+        tts.say_stream(answer_stream)
         if not settings.follow_up:
             return True
 
