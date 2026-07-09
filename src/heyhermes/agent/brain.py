@@ -26,20 +26,6 @@ class Brain:
             timeout=settings.hermes_timeout,
         )
         self.history: list[dict] = []
-    # TODO<jvras>: remover ask() e say() e usar só ask_stream() e say_stream(), para não precisar guardar a resposta inteira na memória antes de falar. Assim a voz começa a falar antes de o texto inteiro estar pronto, e a memória do agente não precisa guardar a resposta inteira. A conversa continua sendo guardada no histórico do agente, mas não precisamos guardar a resposta inteira na memória do cliente.
-    def ask(self, text: str) -> str:
-        s = self.settings
-        self.history.append({"role": "user", "content": text})
-        self.history = self.history[-s.max_history :]
-        messages = [{"role": "system", "content": s.system_prompt}, *self.history]
-        try:
-            response = self.client.chat.completions.create(model=s.hermes_model, messages=messages)
-            answer = response.choices[0].message.content or ""
-        except Exception as exc:
-            log.exception("Erro ao consultar o hermes-agent")
-            return f"Tive um problema ao pensar na resposta: {exc}"
-        self.history.append({"role": "assistant", "content": answer})
-        return answer
 
     def ask_stream(self, text: str):
         s = self.settings

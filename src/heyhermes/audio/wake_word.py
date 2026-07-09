@@ -6,6 +6,7 @@ caminho do .onnx em WAKE_WORDS no .env.
 """
 
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -49,13 +50,17 @@ class WakeWordListener:
         models = [_resolve_model(name) for name in settings.wake_words]
         self.model = Model(wakeword_models=models, inference_framework="onnx")
 
-    def listen(self) -> str:
-        """Bloqueia até detectar uma wake word e retorna o nome dela."""
+    def listen(self, stop_event: threading.Event | None = None) -> str | None:
+        """Bloqueia até detectar uma wake word ou até um stop_event ser acionado."""
         s = self.settings
         self.model.reset()
         with MicStream(s, frame_samples=s.frames_samples) as mic:
             while True:
+                if stop_event is not None and stop_event.is_set():
+                    return None
                 self.model.predict(mic.read())
+                if stop_event is not None and stop_event.is_set():
+                    return None
                 for name, buffer in self.model.prediction_buffer.items():
                     if buffer and buffer[-1] >= s.wake_threshold:
                         log.info("Wake word detectada: %s (%.2f)", name, buffer[-1])

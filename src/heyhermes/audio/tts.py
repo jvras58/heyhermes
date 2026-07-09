@@ -5,6 +5,8 @@ A reprodução é em streaming: cada chunk sintetizado vai direto para a saída 
 """
 
 import logging
+import threading
+from collections.abc import Iterable
 
 import sounddevice as sd
 from piper import PiperVoice
@@ -28,18 +30,7 @@ class TextToSpeech:
         log.info("Carregando voz Piper '%s'…", settings.piper_voice)
         self.voice = PiperVoice.load(str(model_path))
 
-    def say(self, text: str) -> None:
-        text = text.strip()
-        if not text:
-            return
-        log.info("Falando: %r", text)
-        with sd.RawOutputStream(
-            samplerate=self.voice.config.sample_rate, channels=1, dtype="int16"
-        ) as stream:
-            for chunk in self.voice.synthesize(text):
-                stream.write(chunk.audio_int16_bytes)
-
-    def say_stream(self, text_generator) -> None:
+    def say_stream(self, text_generator: Iterable[str], stop_event: threading.Event) -> None:
         buffer = ""
         punctuation = (".", "!", "?", ",", "\n")
 
@@ -47,6 +38,9 @@ class TextToSpeech:
             samplerate=self.voice.config.sample_rate, channels=1, dtype="int16"
         ) as stream:
             for token in text_generator:
+                if stop_event.is_set():
+                    return
+
                 buffer += token
 
                 if any(buffer.endswith(symbol) for symbol in punctuation):
@@ -54,9 +48,13 @@ class TextToSpeech:
                     if chunk_text:
                         log.debug("Sintetizando chunk: %r", chunk_text)
                         for audio_chunk in self.voice.synthesize(chunk_text):
+                            if stop_event.is_set():
+                                return
                             stream.write(audio_chunk.audio_int16_bytes)
                     buffer = ""
 
-            if buffer.strip():
+            if buffer.strip() and not stop_event.is_set():
                 for audio_chunk in self.voice.synthesize(buffer.strip()):
+                    if stop_event.is_set():
+                        return
                     stream.write(audio_chunk.audio_int16_bytes)
