@@ -1,8 +1,11 @@
-"""Sintetização de voz com o Piper (100% local)."""
+"""Sintetização de voz com o Piper (100% local).
+
+A reprodução é em streaming: cada chunk sintetizado vai direto para a saída de
+áudio, então a fala começa antes de a frase inteira estar pronta.
+"""
 
 import logging
 
-import numpy as np
 import sounddevice as sd
 from piper import PiperVoice
 
@@ -19,7 +22,7 @@ class TextToSpeech:
             raise FileNotFoundError(
                 f"Voz do Piper não encontrada em {model_path}.\n"
                 f"Baixe com:\n"
-                f'  uv run python -m piper.download_voices {settings.piper_voice} '
+                f"  uv run python -m piper.download_voices {settings.piper_voice} "
                 f'--data-dir "{settings.piper_dir}"'
             )
         log.info("Carregando voz Piper '%s'…", settings.piper_voice)
@@ -30,11 +33,8 @@ class TextToSpeech:
         if not text:
             return
         log.info("Falando: %r", text)
-        chunks = list(self.voice.synthesize(text))
-        if not chunks:
-            return
-        sample_rate = chunks[0].sample_rate
-        audio = np.concatenate(
-            [np.frombuffer(c.audio_int16_bytes, dtype=np.int16) for c in chunks]
-        )
-        sd.play(audio, samplerate=sample_rate, blocking=True)
+        with sd.RawOutputStream(
+            samplerate=self.voice.config.sample_rate, channels=1, dtype="int16"
+        ) as stream:
+            for chunk in self.voice.synthesize(text):
+                stream.write(chunk.audio_int16_bytes)

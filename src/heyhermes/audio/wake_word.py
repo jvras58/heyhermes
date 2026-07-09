@@ -17,8 +17,6 @@ from heyhermes.core.config import Settings
 
 log = logging.getLogger(__name__)
 
-# openWakeWord trabalha com frames de 80 ms a 16 kHz
-FRAME_SAMPLES = 1280
 
 
 def _ensure_pretrained_models(names: list[str]) -> None:
@@ -30,27 +28,27 @@ def _ensure_pretrained_models(names: list[str]) -> None:
         from openwakeword.utils import download_models
 
         download_models()
-    except Exception as exc:  # sem internet, mas os modelos podem já existir
+    except Exception as exc:
         log.warning("Não foi possível baixar modelos do openWakeWord: %s", exc)
+
+
+def _resolve_model(name: str) -> str:
+    """Aceita nome pré-treinado do openWakeWord ou caminho de um .onnx customizado."""
+    if not name.endswith(".onnx"):
+        return name
+    path = Path(name)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    if not path.exists():
+        raise FileNotFoundError(f"Modelo de wake word não encontrado: {path}")
+    return str(path)
 
 
 class WakeWordListener:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         _ensure_pretrained_models(settings.wake_words)
-
-        models: list[str] = []
-        for name in settings.wake_words:
-            if name.endswith(".onnx"):
-                path = Path(name)
-                if not path.is_absolute():
-                    path = Path.cwd() / path
-                if not path.exists():
-                    raise FileNotFoundError(f"Modelo de wake word não encontrado: {path}")
-                models.append(str(path))
-            else:
-                models.append(name)
-
+        models = [_resolve_model(name) for name in settings.wake_words]
         self.model = Model(wakeword_models=models, inference_framework="onnx")
 
     def listen(self) -> str:
@@ -61,10 +59,10 @@ class WakeWordListener:
             samplerate=s.sample_rate,
             channels=1,
             dtype="int16",
-            blocksize=FRAME_SAMPLES,
+            blocksize=s.frames_samples,
         ) as stream:
             while True:
-                frame, _overflowed = stream.read(FRAME_SAMPLES)
+                frame, _overflowed = stream.read(s.frames_samples)
                 self.model.predict(np.squeeze(frame))
                 for name, buffer in self.model.prediction_buffer.items():
                     if buffer and buffer[-1] >= s.wake_threshold:

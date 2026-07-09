@@ -24,7 +24,7 @@ def _matches(text: str, phrases: list[str]) -> bool:
 
 
 def main() -> None:
-    log.info("Inicializando HeyHermes (backend: %s)…", settings.backend)
+    log.info("Inicializando HeyHermes (hermes-agent em %s)…", settings.hermes_base_url)
     tts = TextToSpeech(settings)
     stt = SpeechToText(settings)
     wake = WakeWordListener(settings)
