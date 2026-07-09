@@ -1,0 +1,25 @@
+# Hermes Agent (NousResearch) — cérebro do HeyHermes via API OpenAI-compatível
+#
+# Primeira vez (wizard de setup — escolhe provedor/modelo e salva em ./hermes-data):
+#   docker compose run --rm hermes setup
+#
+# Subir o gateway:
+#   docker compose up -d
+#
+# API: http://localhost:8642/v1/chat/completions  (model: "hermes-agent")
+services:
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes
+    restart: unless-stopped
+    command: gateway run
+    ports:
+      - "127.0.0.1:8642:8642" # API OpenAI-compatível
+    volumes:
+      - ./hermes-data:/opt/data # config, chaves, sessões, memórias, skills
+    environment:
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_KEY=${HERMES_API_KEY:-change-me-local-dev}
+      # dashboard (porta 9119) desabilitado: exige configurar autenticação;
+      # veja "dashboard.basic_auth" na doc do hermes-agent se quiser habilitar
