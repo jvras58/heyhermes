@@ -3,9 +3,9 @@
 import logging
 
 import numpy as np
-import sounddevice as sd
 from faster_whisper import WhisperModel
 
+from heyhermes.audio.mic import MicStream
 from heyhermes.core.config import Settings
 
 log = logging.getLogger(__name__)
@@ -26,26 +26,22 @@ class SpeechToText:
     def record_command(self) -> np.ndarray:
         """Grava até o usuário parar de falar (detecção de silêncio por energia RMS).
 
-        Retorna o áudio como float32 normalizado, pronto para o Whisper.
+        Se ninguém começar a falar dentro de `speech_start_timeout`, retorna
+        áudio vazio. Retorna float32 normalizado, pronto para o Whisper.
         """
         s = self.settings
         frame_samples = int(s.sample_rate * FRAME_MS / 1000)
         max_frames = int(s.max_command_seconds * 1000 / FRAME_MS)
         silence_frames_limit = int(s.silence_seconds * 1000 / FRAME_MS)
+        start_timeout_frames = int(s.speech_start_timeout * 1000 / FRAME_MS)
 
         frames: list[np.ndarray] = []
         silence_frames = 0
         started_talking = False
 
-        with sd.InputStream(
-            samplerate=s.sample_rate,
-            channels=1,
-            dtype="int16",
-            blocksize=frame_samples,
-        ) as stream:
-            for _ in range(max_frames):
-                frame, _ = stream.read(frame_samples)
-                frame = np.squeeze(frame)
+        with MicStream(s, frame_samples=frame_samples) as mic:
+            for i in range(max_frames):
+                frame = mic.read()
                 frames.append(frame)
 
                 rms = float(np.sqrt(np.mean(frame.astype(np.float64) ** 2)))
@@ -56,6 +52,9 @@ class SpeechToText:
                     silence_frames += 1
                     if silence_frames >= silence_frames_limit:
                         break
+                elif i >= start_timeout_frames:
+                    log.info("Ninguém falou em %.0fs; desistindo.", s.speech_start_timeout)
+                    return np.zeros(0, dtype=np.float32)
 
         audio = np.concatenate(frames) if frames else np.zeros(0, dtype=np.int16)
         return audio.astype(np.float32) / 32768.0

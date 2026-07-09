@@ -30,6 +30,12 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------------ áudio / STT
     sample_rate: int = 16_000
+    # índice do dispositivo de entrada (None = padrão do sistema);
+    # liste com: uv run python -m sounddevice
+    input_device: int | None = None
+    # ganho de software aplicado à captura (para microfones fracos);
+    # se aumentar, aumente SILENCE_THRESHOLD na mesma proporção
+    input_gain: float = 1.0
     whisper_model: str = "small"  # tiny | base | small | medium | large-v3
     whisper_device: str = "cpu"  # cpu | cuda
     whisper_compute_type: str = "int8"  # int8 (cpu) | float16 (gpu)
@@ -38,6 +44,10 @@ class Settings(BaseSettings):
     silence_threshold: float = 300.0  # RMS mínimo para considerar "falando"
     silence_seconds: float = 1.2  # silêncio contínuo que encerra a gravação
     max_command_seconds: float = 15.0  # duração máxima de um comando
+    # se ninguém começar a falar nesse tempo, desiste da gravação
+    speech_start_timeout: float = 6.0
+    # modo conversa: após responder, volta a escutar sem exigir a wake word
+    follow_up: bool = True
 
     # ------------------------------------------------------------------ TTS (Piper)
     piper_voice: str = "pt_BR-faber-medium"

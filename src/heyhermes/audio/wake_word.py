@@ -9,14 +9,12 @@ import logging
 import time
 from pathlib import Path
 
-import numpy as np
-import sounddevice as sd
 from openwakeword.model import Model
 
+from heyhermes.audio.mic import MicStream
 from heyhermes.core.config import Settings
 
 log = logging.getLogger(__name__)
-
 
 
 def _ensure_pretrained_models(names: list[str]) -> None:
@@ -55,15 +53,9 @@ class WakeWordListener:
         """Bloqueia até detectar uma wake word e retorna o nome dela."""
         s = self.settings
         self.model.reset()
-        with sd.InputStream(
-            samplerate=s.sample_rate,
-            channels=1,
-            dtype="int16",
-            blocksize=s.frames_samples,
-        ) as stream:
+        with MicStream(s, frame_samples=s.frames_samples) as mic:
             while True:
-                frame, _overflowed = stream.read(s.frames_samples)
-                self.model.predict(np.squeeze(frame))
+                self.model.predict(mic.read())
                 for name, buffer in self.model.prediction_buffer.items():
                     if buffer and buffer[-1] >= s.wake_threshold:
                         log.info("Wake word detectada: %s (%.2f)", name, buffer[-1])

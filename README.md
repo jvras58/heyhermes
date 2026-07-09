@@ -53,8 +53,17 @@ uv run heyhermes
 ```
 
 Diga **"Hey Jarvis"** (wake word padrão), espere o "Sim?" e fale o comando.
+
+**Modo conversa:** depois de cada resposta o assistente continua escutando —
+não precisa repetir a wake word. Se você ficar em silêncio por
+`SPEECH_START_TIMEOUT` segundos (padrão 6), ele volta a dormir. Para exigir a
+wake word a cada comando, ponha `FOLLOW_UP=false` no `.env`.
+
 Comandos pré-definidos (sem passar pelo LLM): **"desligar" / "encerrar"**
 finaliza, **"cancelar"** volta a dormir.
+
+> Setup completo do hermes (modelo, provedores, dashboard, troubleshooting):
+> **[docs/hermes-setup.md](docs/hermes-setup.md)**
 
 ## Trocando o modelo do hermes
 
@@ -104,8 +113,37 @@ WAKE_WORDS=["models/wake/hey_hermes.onnx"]
 Alternativa: [Picovoice Porcupine](https://picovoice.ai/) treina "Hey Hermes" na
 hora no console web (grátis para uso pessoal, exige access key).
 
+## Dashboard do hermes
+
+Interface web do agente (sessões, memórias, skills e chat) em
+**http://localhost:9119/login**. O login usa o usuário e o hash de senha
+definidos em `hermes-data/config.yaml` (`dashboard.basic_auth`) — o passo a
+passo de como criar essas credenciais está no
+[guia de setup](docs/hermes-setup.md#5-dashboard-web).
+
+## Problemas comuns
+
+**Wake word não dispara** — os modelos pré-treinados do openWakeWord são
+treinados com pronúncia **inglesa**: fale "hey JAR-vis" / "ah-LEK-sah" puxado
+pro inglês. Pronúncia brasileira pontua ~0.05 (limiar: 0.5). A solução
+definitiva é treinar um modelo pt-BR (seção acima).
+
+**Nada responde e o log mostra "Nível ambiente do microfone: RMS" muito baixo
+(< 10)** — o mic padrão do Windows não é o que você está usando (headset
+desconectado faz o padrão cair pro mic interno). Conecte o headset ou escolha
+o dispositivo no `.env`:
+
+```env
+INPUT_DEVICE=1       # índice de: uv run python -m sounddevice
+INPUT_GAIN=1.0       # ganho de software p/ mics fracos (suba SILENCE_THRESHOLD junto)
+```
+
+O heyhermes captura na taxa nativa do dispositivo e reamostra para 16 kHz por
+software ([audio/mic.py](src/heyhermes/audio/mic.py)) — drivers como o Intel
+Smart Sound ignoram a taxa pedida e entregariam áudio "esticado".
+
 ## Segurança
 
 As tools do hermes (terminal, arquivos, web) rodam **dentro do container**, não
-no seu Windows — o que também serve de sandbox. A API fica exposta apenas em
-`localhost:8642`, protegida pela `HERMES_API_KEY` do `.env`.
+no seu Windows — o que também serve de sandbox. A API (`localhost:8642`) e o
+dashboard (`localhost:9119`) só escutam em localhost e exigem autenticação.
