@@ -65,6 +65,44 @@ finaliza, **"cancelar"** volta a dormir.
 > Setup completo do hermes (modelo, provedores, dashboard, troubleshooting):
 > **[docs/hermes-setup.md](docs/hermes-setup.md)**
 
+## Relatórios do banco + abrir o navegador 📊
+
+O agente pode consultar um **PostgreSQL seu**, montar um relatório HTML (tabela
++ gráfico) e **abrir na sua tela**, além de abrir sites no seu navegador — tudo
+por voz:
+
+- *"Me mostra o total de vendas por categoria."* → ele descobre as tabelas,
+  escreve o SQL, gera o relatório, abre no navegador e fala um resumo.
+- *"Abre o site da Nous Research."* → abre no seu navegador padrão.
+
+O acesso ao banco é **isolado e somente-leitura**: quem fala com o banco é um
+servidor MCP dedicado (**DBHub**, no container `db-mcp`) que guarda a conexão —
+o agente nunca vê a senha e só ganha tools read-only (`search_objects`,
+`execute_sql`). O relatório é montado por um renderizador sem acesso a banco, e
+a ponte de mostrar na tela usa mounts (`./reports`) + diretivas no texto.
+
+**Testar na hora, sem ter um banco** — sobe um Postgres de exemplo (mini-loja):
+
+```env
+HEYHERMES_PG_DSN=postgres://hermes:hermes@demo-db:5432/loja?sslmode=disable
+```
+
+```powershell
+docker compose --profile demo up -d
+docker compose exec hermes hermes mcp add banco --url http://db-mcp:8080/mcp
+```
+
+**Com o seu banco** — aponte o `.env` (esquema `postgres://`) e use `--profile db`.
+O DBHub é multi-banco, então trocar para MySQL/MariaDB, SQLite ou SQL Server é só
+mudar o DSN. Guia completo (arquitetura MCP, banco demo, trocar de banco,
+segurança, troubleshooting):
+**[docs/relatorios-e-navegador.md](docs/relatorios-e-navegador.md)**
+
+> **Adicionando mais ferramentas?** Prefira **plugar um MCP no hermes** a
+> escrever tools diretas — isola credenciais e qualquer um estende com 1–2
+> comandos. Princípio e passo a passo em
+> **[docs/estendendo-com-mcp.md](docs/estendendo-com-mcp.md)**.
+
 ## Trocando o modelo do hermes
 
 O modelo/provedor fica no próprio hermes — o heyhermes não precisa mudar nada.

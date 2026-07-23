@@ -18,8 +18,54 @@ services:
       - "127.0.0.1:9119:9119" # dashboard web (login: dashboard.basic_auth no config.yaml)
     volumes:
       - ./hermes-data:/opt/data # config, chaves, sessões, memórias, skills
+      - ./hermes-tools:/hermes-tools:ro # scripts do agente (db_report.py) — só leitura
+      - ./reports:/reports # relatórios HTML gerados; o heyhermes abre no navegador do host
     environment:
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - API_SERVER_KEY=${HERMES_API_KEY:-change-me-local-dev}
       - HERMES_DASHBOARD=1
+      # A conexão do banco NÃO fica aqui: ela vive só no serviço postgres-mcp
+      # (abaixo), que media o acesso. O agente consulta via ferramentas MCP
+      # read-only e nunca vê a senha. Ver docs/relatorios-e-navegador.md.
+
+  # Servidor MCP de banco (bytebase/dbhub) — a ponte read-only entre o agente e
+  # o seu banco. Guarda o DSN (o agente NUNCA vê a senha), roda a tool execute_sql
+  # em modo somente-leitura (dbhub.toml) e expõe: execute_sql, search_objects.
+  # O hermes o alcança em http://db-mcp:8080/mcp (Streamable HTTP).
+  # Multi-banco: Postgres, MySQL/MariaDB, SQLite, SQL Server — só troca o DSN.
+  #   Seu banco:  docker compose --profile db up -d      (DSN em HEYHERMES_PG_DSN)
+  #   Banco demo: docker compose --profile demo up -d     (usa o demo-db abaixo)
+  # Registre uma vez no hermes (ver docs/relatorios-e-navegador.md):
+  #   docker compose exec hermes hermes mcp add banco --url http://db-mcp:8080/mcp
+  db-mcp:
+    image: bytebase/dbhub:latest
+    container_name: heyhermes-db-mcp
+    profiles: ["db", "demo"]
+    restart: unless-stopped
+    command:
+      ["--config", "/config/dbhub.toml", "--transport", "http",
+       "--port", "8080", "--allowed-hosts", "db-mcp"]
+    environment:
+      # DSN do SEU banco (host.docker.internal p/ banco no Windows) ou do demo-db.
+      # Formato DBHub: postgres:// | mysql:// | sqlite:/// | sqlserver://
+      - DSN=${HEYHERMES_PG_DSN:-}
+    volumes:
+      - ./hermes-tools/dbhub/dbhub.toml:/config/dbhub.toml:ro
+
+  # Banco PostgreSQL de EXEMPLO (mini-loja) para testar por voz sem ter um banco.
+  # Só sobe com o profile "demo":  docker compose --profile demo up -d
+  # No .env, aponte:  HEYHERMES_PG_DSN=postgresql://hermes:hermes@demo-db:5432/loja
+  demo-db:
+    image: postgres:16-alpine
+    container_name: heyhermes-demo-db
+    profiles: ["demo"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=hermes
+      - POSTGRES_PASSWORD=hermes
+      - POSTGRES_DB=loja
+    ports:
+      - "127.0.0.1:5433:5432" # opcional: inspecionar com um cliente SQL no host
+    volumes:
+      - ./hermes-tools/demo/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro

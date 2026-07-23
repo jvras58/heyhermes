@@ -15,3 +15,7 @@ models/
 
 # Dados do hermes-agent (config, chaves, sessões, memórias)
 hermes-data/
+
+# Relatórios HTML gerados pelo agente (mantém a pasta, ignora o conteúdo)
+reports/*
+!reports/.gitkeep

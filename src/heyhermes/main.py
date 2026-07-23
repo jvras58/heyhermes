@@ -5,6 +5,7 @@ import threading
 
 import numpy as np
 
+from heyhermes.agent.actions import HostActions
 from heyhermes.agent.brain import Brain
 from heyhermes.audio.mic import MicStream
 from heyhermes.audio.stt import SpeechToText
@@ -88,7 +89,8 @@ def _conversation(
             return True
 
         stop_event = threading.Event()
-        answer_stream = brain.ask_stream(command)
+        actions = HostActions(settings)
+        answer_stream = actions.filter_stream(brain.ask_stream(command))
         tts_thread = threading.Thread(
             target=tts.say_stream,
             args=(answer_stream, stop_event),
@@ -102,8 +104,12 @@ def _conversation(
         tts_thread.start()
         barge_in_thread.start()
         tts_thread.join()
+        interrupted = stop_event.is_set()  # setado pelo barge-in, se houve
         stop_event.set()
         barge_in_thread.join(timeout=1.0)
+        # só abre navegador/relatório se a resposta terminou (não foi interrompida)
+        if not interrupted:
+            actions.execute()
         if not settings.follow_up:
             return True
 
