@@ -41,7 +41,15 @@ class Brain:
                 stream=True,
             )
             for chunk in response:
-                content = chunk.choices[0].delta.content
+                # Nem todo chunk traz texto: provedores mandam chunks só de uso
+                # (choices vazio) e modelos de raciocínio mandam reasoning_content.
+                # Sem essas guardas, um chunk desses derruba a resposta inteira.
+                if not getattr(chunk, "choices", None):
+                    continue
+                delta = getattr(chunk.choices[0], "delta", None)
+                if delta is None:
+                    continue
+                content = getattr(delta, "content", None)
                 if content:
                     full_answer += content
                     yield content
