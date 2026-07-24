@@ -150,8 +150,41 @@ sempre é o DSN: use o esquema `postgres://` (não `postgresql://`),
 `host.docker.internal` para banco no Windows, e `?sslmode=disable` se o banco não
 usa SSL.
 
+**O `db-mcp` fica em `Restarting` / erro "source 'default' must have … dsn"** — o
+container foi criado **antes** de o `HEYHERMES_PG_DSN` existir no `.env`, e pegou
+um DSN vazio. O `.env` só é lido na **criação** do container, então editar o
+`.env` depois não basta: force a recriação.
+
+```powershell
+docker compose --profile demo up -d --force-recreate db-mcp
+```
+
+**A voz trava e o heyhermes mostra `openai.APIError: Connection error`** — em
+geral o `db-mcp` está fora do ar ou em crash-loop: o agente fica preso tentando
+usar a tool até a conexão cair. Cheque `docker ps` (o `db-mcp` deve estar `Up`,
+não `Restarting`) e os logs dele. Se ele ficou fora enquanto o hermes subiu, o
+hermes "estaciona" a conexão MCP — reinicie: `docker compose restart hermes` e
+confirme com `hermes mcp test banco`.
+
 **O relatório não abre na tela** — veja o log do heyhermes: se aparecer
 `Abrindo relatório no navegador`, a ponte funcionou. Se o agente não emitiu
-`[[ABRIR_RELATORIO ...]]`, o modelo é fraco para o protocolo — use um
-provedor/modelo mais forte (README, "Trocando o modelo"). Modelos 7B costumam se
-atrapalhar orquestrando várias tools MCP + o render.
+`[[ABRIR_RELATORIO ...]]`, provavelmente é o modelo (ver abaixo).
+
+**O agente pede "onde estão os dados", inventa arquivos, ou imprime as chamadas
+de tool como JSON no texto em vez de executá-las** — é **modelo fraco demais**,
+não problema de configuração. Confirme que a infra está sã:
+
+```powershell
+docker compose exec hermes hermes mcp test banco   # deve dizer "Connected" + 2 tools
+```
+
+Se isso passa e mesmo assim o agente não usa as tools, troque o modelo. Testado:
+o **`qwen2.5:7b` não dá conta** — ele descreve as tools em markdown em vez de
+chamá-las, e ignora o formato de fala. Este fluxo (procurar tabelas → SELECT →
+salvar JSON → renderizar → emitir a diretiva) exige um modelo com tool-calling
+sólido. Use um provedor forte:
+
+```powershell
+docker compose run --rm hermes model     # wizard: Nous Portal, OpenRouter, OpenAI…
+docker compose restart hermes
+```
