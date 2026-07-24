@@ -59,8 +59,8 @@ def _speak(tts: TextToSpeech, answer: Iterator[str], wake: WakeWordListener) -> 
     tts_thread.start()
     barge_in_thread.start()
     tts_thread.join()
-    interrupted = stop_event.is_set()  # se já está setado, foi o barge-in
-    stop_event.set()  # encerra o listener quando a fala termina naturalmente
+    interrupted = stop_event.is_set()
+    stop_event.set()
     barge_in_thread.join(timeout=1.0)
     return interrupted
 
@@ -113,7 +113,6 @@ def _conversation(
 
         actions = HostActions(settings)
         answer = actions.filter_stream(brain.ask_stream(command))
-        # só abre navegador/relatório se a resposta terminou (não foi interrompida)
         if not _speak(tts, answer, wake):
             actions.execute()
         if not settings.follow_up:

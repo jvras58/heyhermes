@@ -35,7 +35,6 @@ class HostActions:
         self.settings = settings
         self.actions: list[tuple[str, str]] = []
 
-    # ------------------------------------------------------------ stream filter
     def filter_stream(self, tokens: Iterable[str]) -> Iterator[str]:
         """Repassa o texto para a fala, mas engole as diretivas `[[...]]`.
 
@@ -44,7 +43,7 @@ class HostActions:
         fala nada daquele trecho. Assim o streaming continua responsivo.
         """
         buf = ""
-        holding = False  # dentro de um possível `[[ ... ]]`
+        holding = False
         for token in tokens:
             buf += token
             while buf:
@@ -58,23 +57,23 @@ class HostActions:
                         yield buf[:i]
                         buf = buf[i:]
                     if len(buf) < 2:
-                        break  # espera o próximo token para saber se é "[["
+                        break
                     if buf[1] == "[":
                         holding = True
                         continue
-                    yield buf[0]  # "[" solto, não é diretiva
+                    yield buf[0]
                     buf = buf[1:]
                     continue
                 j = buf.find("]]")
                 if j == -1:
-                    break  # ainda não fechou; segura
+                    break
                 self._record(buf[: j + 2])
                 buf = buf[j + 2 :]
                 holding = False
         if buf and not holding:
             yield buf
         elif buf and holding:
-            self._record(buf)  # diretiva incompleta no fim — tenta, senão ignora
+            self._record(buf)
 
     def _record(self, marker: str) -> None:
         """Registra a ação de um `[[...]]` completo; ignora o que não casar."""
@@ -82,7 +81,6 @@ class HostActions:
         if m:
             self.actions.append((_KINDS[m.group(1).upper()], m.group(2).strip("\"'")))
 
-    # --------------------------------------------------------------- execução
     def execute(self) -> None:
         if not self.settings.enable_host_actions:
             if self.actions:
@@ -97,7 +95,6 @@ class HostActions:
         self.actions.clear()
 
     def _open_report(self, name: str) -> None:
-        # aceita só um nome de arquivo dentro de ./reports (nada de path traversal)
         safe = self.settings.reports_dir / Path(name).name
         reports_root = self.settings.reports_dir.resolve()
         path = safe.resolve()

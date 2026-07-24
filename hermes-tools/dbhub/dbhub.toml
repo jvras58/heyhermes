@@ -1,8 +1,4 @@
 # Config do DBHub (servidor MCP de banco) usado pelo HeyHermes.
-# O DSN NÃO fica aqui — vem da env DSN (definida no compose a partir de
-# HEYHERMES_PG_DSN no .env), então este arquivo pode ir pro git sem segredo.
-# A tool execute_sql roda em modo somente-leitura (readonly = true).
-
 [[sources]]
 id = "default"
 dsn = "${DSN}"

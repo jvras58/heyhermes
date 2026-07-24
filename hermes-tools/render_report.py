@@ -27,11 +27,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-MAX_ROWS_HTML = 500  # linhas renderizadas na tabela (evita HTML gigante)
-PREVIEW_ROWS = 5  # linhas no resumo de texto (o agente fala isso)
+MAX_ROWS_HTML = 500
+PREVIEW_ROWS = 5
 
 
-# ---------------------------------------------------------------- normalização
 def _columns_from_dicts(rows: list[dict]) -> list[str]:
     """União das chaves de todas as linhas, na ordem em que aparecem."""
     columns: list[str] = []
@@ -62,8 +61,6 @@ def normalize(data) -> tuple[list[str], list[tuple]]:
         return _to_table(data, None)
     raise ValueError("JSON não reconhecido: envie uma lista de objetos ou {columns, rows}.")
 
-
-# ------------------------------------------------------------------------ html
 def _looks_numeric(values: list) -> bool:
     seen = False
     for v in values:
@@ -194,7 +191,6 @@ def render_html(title: str, columns: list[str], rows: list[tuple]) -> str:
 """
 
 
-# ------------------------------------------------------------------------ main
 def main() -> None:
     parser = argparse.ArgumentParser(description="Renderiza linhas JSON em um relatório HTML.")
     parser.add_argument("--title", default="Relatório")
