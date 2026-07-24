@@ -124,18 +124,24 @@ docker compose restart hermes
 ```
 
 **Provedor forte (recomendado):** modelos 7B se atrapalham com o prompt
-agêntico do hermes. O wizard configura Nous Portal, OpenRouter, OpenAI etc.:
+agêntico do hermes — para o fluxo de relatórios eles simplesmente não dão
+conta. O wizard configura Nous Portal, OpenRouter, OpenAI etc.:
 
 ```powershell
-docker compose run --rm hermes model     # escolhe provedor e modelo
+docker compose run --rm hermes model     # wizard interativo
 docker compose restart hermes
 ```
 
-Também dá para setar valores direto, por exemplo:
+Com o container **já rodando**, prefira `exec` (instantâneo — `run --rm` cria
+um container novo e parece travado):
 
 ```powershell
-docker compose run --rm hermes config set OPENROUTER_API_KEY sua-chave
+docker compose exec hermes hermes config set OPENROUTER_API_KEY sua-chave
 ```
+
+> Endpoints OpenAI-compatíveis (NVIDIA NIM, Groq…), o padrão `key_env` e os
+> erros comuns de Docker estão em
+> **[docs/hermes-setup.md](docs/hermes-setup.md#4-modelo--provedor-llm)**.
 
 ## Wake word "Hey Hermes"
 
