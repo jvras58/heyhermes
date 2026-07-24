@@ -32,36 +32,34 @@ PREVIEW_ROWS = 5  # linhas no resumo de texto (o agente fala isso)
 
 
 # ---------------------------------------------------------------- normalização
+def _columns_from_dicts(rows: list[dict]) -> list[str]:
+    """União das chaves de todas as linhas, na ordem em que aparecem."""
+    columns: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in columns:
+                columns.append(key)
+    return columns
+
+
+def _to_table(raw: list, columns: list[str] | None) -> tuple[list[str], list[tuple]]:
+    """Converte linhas (objetos ou sequências) em (colunas, tuplas)."""
+    if raw and isinstance(raw[0], dict):
+        columns = columns or _columns_from_dicts(raw)
+        return columns, [tuple(row.get(c) for c in columns) for row in raw]
+    rows = [tuple(r) if isinstance(r, (list, tuple)) else (r,) for r in raw]
+    width = len(rows[0]) if rows else 0
+    return list(columns or [f"col{i + 1}" for i in range(width)]), rows
+
+
 def normalize(data) -> tuple[list[str], list[tuple]]:
     """Aceita os vários formatos de saída de uma consulta e devolve (colunas, linhas)."""
     if isinstance(data, str):
         data = json.loads(data)
-
     if isinstance(data, dict) and "rows" in data:
-        raw = data["rows"]
-        if raw and isinstance(raw[0], dict):
-            columns = data.get("columns") or list(raw[0].keys())
-            rows = [tuple(r.get(c) for c in columns) for r in raw]
-        else:
-            width = len(raw[0]) if raw else 0
-            columns = data.get("columns") or [f"col{i + 1}" for i in range(width)]
-            rows = [tuple(r) for r in raw]
-        return list(columns), rows
-
+        return _to_table(data["rows"], data.get("columns"))
     if isinstance(data, list):
-        if data and isinstance(data[0], dict):
-            columns: list[str] = []
-            for item in data:  # união de chaves, preservando a ordem de aparição
-                for k in item:
-                    if k not in columns:
-                        columns.append(k)
-            rows = [tuple(item.get(c) for c in columns) for item in data]
-        else:
-            width = len(data[0]) if data and isinstance(data[0], (list, tuple)) else 1
-            columns = [f"col{i + 1}" for i in range(width)]
-            rows = [tuple(r) if isinstance(r, (list, tuple)) else (r,) for r in data]
-        return columns, rows
-
+        return _to_table(data, None)
     raise ValueError("JSON não reconhecido: envie uma lista de objetos ou {columns, rows}.")
 
 

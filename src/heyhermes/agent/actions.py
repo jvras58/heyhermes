@@ -24,8 +24,10 @@ from heyhermes.core.config import Settings
 
 log = logging.getLogger(__name__)
 
-_SITE_RE = re.compile(r"\[\[\s*ABRIR_SITE\s+(\S+?)\s*\]\]", re.IGNORECASE)
-_REPORT_RE = re.compile(r"\[\[\s*ABRIR_RELATORIO\s+(.+?)\s*\]\]", re.IGNORECASE)
+# As diretivas são ensinadas ao agente no SYSTEM_PROMPT (core/config.py) —
+# mantenha os nomes em sincronia com o texto de lá.
+_DIRECTIVE_RE = re.compile(r"\[\[\s*ABRIR_(SITE|RELATORIO)\s+(.+?)\s*\]\]", re.IGNORECASE)
+_KINDS = {"SITE": "site", "RELATORIO": "report"}
 
 
 class HostActions:
@@ -75,13 +77,10 @@ class HostActions:
             self._record(buf)  # diretiva incompleta no fim — tenta, senão ignora
 
     def _record(self, marker: str) -> None:
-        m = _SITE_RE.search(marker)
+        """Registra a ação de um `[[...]]` completo; ignora o que não casar."""
+        m = _DIRECTIVE_RE.search(marker)
         if m:
-            self.actions.append(("site", m.group(1)))
-            return
-        m = _REPORT_RE.search(marker)
-        if m:
-            self.actions.append(("report", m.group(1).strip().strip("\"'")))
+            self.actions.append((_KINDS[m.group(1).upper()], m.group(2).strip("\"'")))
 
     # --------------------------------------------------------------- execução
     def execute(self) -> None:

@@ -30,6 +30,10 @@ class TextToSpeech:
         log.info("Carregando voz Piper '%s'…", settings.piper_voice)
         self.voice = PiperVoice.load(str(model_path))
 
+    def say(self, text: str) -> None:
+        """Fala uma frase pronta — atalho para os avisos curtos do assistente."""
+        self.say_stream(iter([text]), threading.Event())
+
     def say_stream(self, text_generator: Iterable[str], stop_event: threading.Event) -> None:
         buffer = ""
         punctuation = (".", "!", "?", ",", "\n")

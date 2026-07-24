@@ -2,6 +2,7 @@
 
 import logging
 import threading
+from collections.abc import Iterator
 
 import numpy as np
 
@@ -42,6 +43,28 @@ def _run_barge_in_listener(wake: WakeWordListener, stop_event: threading.Event) 
         stop_event.set()
 
 
+def _speak(tts: TextToSpeech, answer: Iterator[str], wake: WakeWordListener) -> bool:
+    """Fala a resposta enquanto escuta a wake word. Retorna True se foi interrompida.
+
+    A fala e o barge-in rodam em paralelo: quem detectar a wake word primeiro
+    seta o `stop_event` e corta o áudio no meio.
+    """
+    stop_event = threading.Event()
+    tts_thread = threading.Thread(
+        target=tts.say_stream, args=(answer, stop_event), daemon=True
+    )
+    barge_in_thread = threading.Thread(
+        target=_run_barge_in_listener, args=(wake, stop_event), daemon=True
+    )
+    tts_thread.start()
+    barge_in_thread.start()
+    tts_thread.join()
+    interrupted = stop_event.is_set()  # se já está setado, foi o barge-in
+    stop_event.set()  # encerra o listener quando a fala termina naturalmente
+    barge_in_thread.join(timeout=1.0)
+    return interrupted
+
+
 def main() -> None:
     log.info("Inicializando HeyHermes (hermes-agent em %s)…", settings.hermes_base_url)
     tts = TextToSpeech(settings)
@@ -50,13 +73,13 @@ def main() -> None:
     brain = Brain(settings)
     _check_microphone()
 
-    tts.say_stream(iter(["Hermes online."]), threading.Event())
+    tts.say("Hermes online.")
     log.info("Aguardando wake word (%s)…", ", ".join(settings.wake_words))
 
     try:
         while True:
             wake.listen()
-            tts.say_stream(iter([settings.ack_phrase]), threading.Event())
+            tts.say(settings.ack_phrase)
             if not _conversation(settings, stt, tts, brain, wake):
                 break
             log.info("Voltando a dormir; aguardando wake word…")
@@ -82,33 +105,16 @@ def _conversation(
         if not command:
             return True
         if _matches(command, settings.exit_commands):
-            tts.say_stream(iter(["Até logo!"]), threading.Event())
+            tts.say("Até logo!")
             return False
         if _matches(command, settings.cancel_commands):
-            tts.say_stream(iter(["Tá bom."]), threading.Event())
+            tts.say("Tá bom.")
             return True
 
-        stop_event = threading.Event()
         actions = HostActions(settings)
-        answer_stream = actions.filter_stream(brain.ask_stream(command))
-        tts_thread = threading.Thread(
-            target=tts.say_stream,
-            args=(answer_stream, stop_event),
-            daemon=True,
-        )
-        barge_in_thread = threading.Thread(
-            target=_run_barge_in_listener,
-            args=(wake, stop_event),
-            daemon=True,
-        )
-        tts_thread.start()
-        barge_in_thread.start()
-        tts_thread.join()
-        interrupted = stop_event.is_set()  # setado pelo barge-in, se houve
-        stop_event.set()
-        barge_in_thread.join(timeout=1.0)
+        answer = actions.filter_stream(brain.ask_stream(command))
         # só abre navegador/relatório se a resposta terminou (não foi interrompida)
-        if not interrupted:
+        if not _speak(tts, answer, wake):
             actions.execute()
         if not settings.follow_up:
             return True
