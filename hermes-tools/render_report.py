@@ -129,67 +129,68 @@ def render_html(title: str, columns: list[str], rows: list[tuple]) -> str:
     )
     chart = _bar_chart(columns, shown)
 
-    return f"""<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(title)}</title>
-<style>
-  :root {{
-    --bg:#f7f7f8; --card:#fff; --ink:#1a1a1e; --muted:#6b6b76; --line:#e6e6ea;
-    --accent:#6d5efc; --accent-soft:#efeaff; --head:#f0f0f3;
-  }}
-  @media (prefers-color-scheme: dark) {{
+    return f"""
+    <!doctype html>
+    <html lang="pt-BR">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{html.escape(title)}</title>
+    <style>
     :root {{
-      --bg:#141418; --card:#1c1c22; --ink:#ececf1; --muted:#9a9aa6; --line:#2b2b33;
-      --accent:#9b8dff; --accent-soft:#26233a; --head:#22222a;
+        --bg:#f7f7f8; --card:#fff; --ink:#1a1a1e; --muted:#6b6b76; --line:#e6e6ea;
+        --accent:#6d5efc; --accent-soft:#efeaff; --head:#f0f0f3;
     }}
-  }}
-  * {{ box-sizing:border-box; }}
-  body {{ margin:0; padding:32px 20px; background:var(--bg); color:var(--ink);
-    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }}
-  .wrap {{ max-width:960px; margin:0 auto; }}
-  header {{ margin-bottom:24px; }}
-  h1 {{ font-size:1.6rem; margin:0 0 4px; }}
-  .sub {{ color:var(--muted); font-size:.9rem; }}
-  .card {{ background:var(--card); border:1px solid var(--line); border-radius:14px;
-    padding:20px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04); }}
-  h2 {{ font-size:1.05rem; margin:0 0 14px; }}
-  .table-scroll {{ overflow-x:auto; }}
-  table {{ border-collapse:collapse; width:100%; font-size:.92rem; }}
-  th,td {{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--line);
-    white-space:nowrap; }}
-  th {{ background:var(--head); font-weight:600; position:sticky; top:0; }}
-  tr:hover td {{ background:var(--accent-soft); }}
-  .note {{ color:var(--muted); font-size:.85rem; margin:10px 2px 0; }}
-  .bar-row {{ display:grid; grid-template-columns:minmax(90px,26%) 1fr auto; align-items:center;
-    gap:12px; margin:7px 0; font-size:.9rem; }}
-  .bar-label {{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; }}
-  .bar-track {{ background:var(--accent-soft); border-radius:99px; height:12px; }}
-  .bar-fill {{ display:block; height:100%; border-radius:99px; background:var(--accent); }}
-  .bar-value {{ font-variant-numeric:tabular-nums; font-weight:600; }}
-  footer {{ color:var(--muted); font-size:.8rem; text-align:center; margin-top:8px; }}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>{html.escape(title)}</h1>
-      <div class="sub">Gerado em {generated} · {total} linha(s) · HeyHermes 🪽</div>
-    </header>
-    {chart}
-    <div class="card">
-      <h2>Dados</h2>
-      <div class="table-scroll">
-        <table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>
-      </div>
-      {truncated}
+    @media (prefers-color-scheme: dark) {{
+        :root {{
+        --bg:#141418; --card:#1c1c22; --ink:#ececf1; --muted:#9a9aa6; --line:#2b2b33;
+        --accent:#9b8dff; --accent-soft:#26233a; --head:#22222a;
+        }}
+    }}
+    * {{ box-sizing:border-box; }}
+    body {{ margin:0; padding:32px 20px; background:var(--bg); color:var(--ink);
+        font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }}
+    .wrap {{ max-width:960px; margin:0 auto; }}
+    header {{ margin-bottom:24px; }}
+    h1 {{ font-size:1.6rem; margin:0 0 4px; }}
+    .sub {{ color:var(--muted); font-size:.9rem; }}
+    .card {{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+        padding:20px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04); }}
+    h2 {{ font-size:1.05rem; margin:0 0 14px; }}
+    .table-scroll {{ overflow-x:auto; }}
+    table {{ border-collapse:collapse; width:100%; font-size:.92rem; }}
+    th,td {{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--line);
+        white-space:nowrap; }}
+    th {{ background:var(--head); font-weight:600; position:sticky; top:0; }}
+    tr:hover td {{ background:var(--accent-soft); }}
+    .note {{ color:var(--muted); font-size:.85rem; margin:10px 2px 0; }}
+    .bar-row {{ display:grid; grid-template-columns:minmax(90px,26%) 1fr auto; align-items:center;
+        gap:12px; margin:7px 0; font-size:.9rem; }}
+    .bar-label {{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; }}
+    .bar-track {{ background:var(--accent-soft); border-radius:99px; height:12px; }}
+    .bar-fill {{ display:block; height:100%; border-radius:99px; background:var(--accent); }}
+    .bar-value {{ font-variant-numeric:tabular-nums; font-weight:600; }}
+    footer {{ color:var(--muted); font-size:.8rem; text-align:center; margin-top:8px; }}
+    </style>
+    </head>
+    <body>
+    <div class="wrap">
+        <header>
+        <h1>{html.escape(title)}</h1>
+        <div class="sub">Gerado em {generated} · {total} linha(s) · HeyHermes 🪽</div>
+        </header>
+        {chart}
+        <div class="card">
+        <h2>Dados</h2>
+        <div class="table-scroll">
+            <table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>
+        </div>
+        {truncated}
+        </div>
+        <footer>Relatório somente-leitura gerado automaticamente pelo agente.</footer>
     </div>
-    <footer>Relatório somente-leitura gerado automaticamente pelo agente.</footer>
-  </div>
-</body>
-</html>
+    </body>
+    </html>
 """
 
 
