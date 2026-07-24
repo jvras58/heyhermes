@@ -8,11 +8,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# raiz do repositório (src/heyhermes/core/config.py -> 3 níveis acima)
 BASE_DIR = Path(__file__).resolve().parents[3]
 
-# Persona + procedimento das ações no host. As diretivas [[...]] descritas aqui
-# são interpretadas por agent/actions.py — mantenha os nomes em sincronia.
 SYSTEM_PROMPT = """\
 Você é Hermes, um assistente de voz pessoal no estilo Jarvis. Responda sempre
 em português do Brasil, de forma curta e natural, como uma fala — sem markdown,
