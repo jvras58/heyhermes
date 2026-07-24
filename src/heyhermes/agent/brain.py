@@ -41,9 +41,6 @@ class Brain:
                 stream=True,
             )
             for chunk in response:
-                # Nem todo chunk traz texto: provedores mandam chunks só de uso
-                # (choices vazio) e modelos de raciocínio mandam reasoning_content.
-                # Sem essas guardas, um chunk desses derruba a resposta inteira.
                 if not getattr(chunk, "choices", None):
                     continue
                 delta = getattr(chunk.choices[0], "delta", None)
